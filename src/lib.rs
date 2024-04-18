@@ -1,6 +1,7 @@
 use std::{
     error::Error,
-    io::{stdin, stdout, Write},
+    fs::File,
+    io::{self, stdin, stdout, Read, Write},
 };
 
 pub mod activation;
@@ -41,6 +42,34 @@ pub fn forward_values(output_values: &[f64]) -> std::io::Result<()> {
         .join(" ");
 
     stdout().write_all(format!("{}\n", serialized_output_values).as_bytes())?;
+
+    Ok(())
+}
+
+fn open_pipe() -> io::Result<File> {
+    File::open("/home/paulo/Code/projects/pipe-nn/pipe")
+}
+
+pub fn read_error() -> io::Result<f64> {
+    let mut pipe = open_pipe()?;
+
+    let mut data = String::new();
+
+    loop {
+        let bytes_read = pipe.read_to_string(&mut data)?;
+
+        if bytes_read == 0 {
+            continue;
+        }
+
+        return Ok(data.trim().parse::<f64>().unwrap());
+    }
+}
+
+pub fn send_error(error: f64) -> io::Result<()> {
+    let mut pipe = open_pipe()?;
+
+    pipe.write_all(format!("{}\n", error).as_bytes())?;
 
     Ok(())
 }

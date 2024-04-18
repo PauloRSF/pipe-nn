@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fs::read_to_string};
 
 use pipe_nn::{activation::ActivationFunction, forward_values, LayerInput};
 
@@ -20,20 +20,37 @@ impl OutputNeuron {
     }
 }
 
+pub fn get_training_answers() -> Result<Vec<f64>, Box<dyn Error>> {
+    Ok(read_to_string("training.txt")?
+        .trim()
+        .split("\n")
+        .map(|vstr| vstr.parse::<f64>())
+        .collect::<Result<Vec<f64>, _>>()?)
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let layer_input = LayerInput::default();
     let layer_activation = ActivationFunction::Sigmoid;
+    let answers = get_training_answers()?;
+    let input_values_with_revolving_index = layer_input
+        .enumerate()
+        .map(|(index, value)| (index % answers.len(), value))
+        .collect::<Vec<_>>();
 
-    for input_values in layer_input {
+    for (index, input_values) in input_values_with_revolving_index {
         let neuron = OutputNeuron {
             bias: -4.6458,
             input_weights: vec![9.461, -9.9307],
             activation: layer_activation,
         };
 
-        let output_values = vec![neuron.fire(input_values)];
+        let output_value = neuron.fire(input_values);
 
-        forward_values(&output_values)?;
+        let error = answers[index] - output_value;
+
+        eprintln!("{:?} {:?} {:?}", answers[index], output_value, error);
+
+        forward_values(&[output_value])?;
     }
 
     Ok(())
