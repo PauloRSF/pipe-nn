@@ -1,53 +1,37 @@
 use std::{
     error::Error,
     fs::File,
-    io::{self, stdin, stdout, Read, Write},
+    io::{self, stdout, Read, Write},
 };
 
 pub mod activation;
+pub mod layer;
 
-#[derive(Default)]
-pub struct LayerInput {}
-
-impl Iterator for LayerInput {
-    type Item = Vec<f64>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        read_layer_input().unwrap_or(None)
-    }
+fn parse_number_list(serialized_values: String) -> Result<Vec<f64>, Box<dyn Error>> {
+    Ok(serialized_values
+        .strip_suffix('\n')
+        .unwrap_or(serialized_values.as_str())
+        .split(' ')
+        .map(|str| str.parse::<f64>())
+        .collect::<Result<Vec<f64>, _>>()?)
 }
 
-pub fn read_layer_input() -> Result<Option<Vec<f64>>, Box<dyn Error>> {
-    let mut serialized_values = String::new();
-
-    if let Ok(0) = stdin().read_line(&mut serialized_values) {
-        Ok(None)
-    } else {
-        let values = serialized_values
-            .strip_suffix('\n')
-            .unwrap_or(serialized_values.as_str())
-            .split(' ')
-            .map(|str| str.parse::<f64>())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Some(values))
-    }
-}
-
-pub fn forward_values(output_values: &[f64]) -> std::io::Result<()> {
-    let serialized_output_values = output_values
+fn serialize_number_list(values: &[f64]) -> String {
+    values
         .iter()
-        .map(|weight| weight.to_string())
+        .map(f64::to_string)
         .collect::<Vec<_>>()
-        .join(" ");
+        .join(" ")
+}
 
-    stdout().write_all(format!("{}\n", serialized_output_values).as_bytes())?;
+pub fn forward(output_values: &[f64]) -> std::io::Result<()> {
+    let data = format!("{}\n", serialize_number_list(output_values));
 
-    Ok(())
+    stdout().write_all(data.as_bytes())
 }
 
 fn open_pipe() -> io::Result<File> {
-    File::open("/home/paulo/Code/projects/pipe-nn/pipe")
+    File::open("pipe")
 }
 
 pub fn read_error() -> io::Result<f64> {
